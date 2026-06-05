@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { CATEGORIES, CATEGORY_META, type Category } from "@/lib/game/types";
+import { sfx } from "@/lib/game/sfx";
 
 interface Props {
   onResult: (category: Category) => void;
