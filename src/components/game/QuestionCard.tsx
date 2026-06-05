@@ -29,11 +29,15 @@ export function QuestionCard({
   const [seconds, setSeconds] = useState(initialSeconds);
   const [selected, setSelected] = useState<number | null>(null);
   const [revealed, setRevealed] = useState(false);
+  const [varStage, setVarStage] = useState<"idle" | "scanning" | "done">("idle");
+  const prevVarLen = useRef(0);
   const lockRef = useRef(false);
   const meta = CATEGORY_META[question.category];
 
   useEffect(() => {
     setSeconds(initialSeconds + extraTime);
+    setVarStage("idle");
+    prevVarLen.current = 0;
   }, [question.id]); // reset on new q
 
   useEffect(() => {
@@ -41,15 +45,27 @@ export function QuestionCard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [extraTime]);
 
+  // VAR animation trigger
   useEffect(() => {
-    if (revealed) return;
+    if (varRemoved.length > prevVarLen.current && varStage === "idle") {
+      setVarStage("scanning");
+      const t = setTimeout(() => setVarStage("done"), 1500);
+      return () => clearTimeout(t);
+    }
+    prevVarLen.current = varRemoved.length;
+  }, [varRemoved, varStage]);
+
+  const paused = varStage === "scanning";
+
+  useEffect(() => {
+    if (revealed || paused) return;
     if (seconds <= 0) {
       handleAnswer(-1);
       return;
     }
     const t = setTimeout(() => setSeconds((s) => s - 1), 1000);
     return () => clearTimeout(t);
-  }, [seconds, revealed]);
+  }, [seconds, revealed, paused]);
 
   function handleAnswer(idx: number) {
     if (lockRef.current) return;
