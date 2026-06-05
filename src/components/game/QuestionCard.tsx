@@ -82,10 +82,11 @@ export function QuestionCard({
   return (
     <div className="w-full max-w-2xl mx-auto">
       <div
-        className="rounded-3xl p-6 md:p-8 shadow-stadium border-2"
+        className="relative rounded-3xl p-6 md:p-8 shadow-stadium border-2 overflow-hidden"
         style={{
           background: "var(--color-card)",
-          borderColor: meta.color,
+          borderColor: varStage === "scanning" ? "oklch(0.62 0.22 25)" : meta.color,
+          transition: "border-color 0.3s ease",
         }}
       >
         {/* Header */}
