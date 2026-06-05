@@ -151,6 +151,13 @@ function GamePage() {
                 <span className="opacity-20">{"❤️".repeat(3 - lives)}</span>
               </div>
             </div>
+            <button
+              onClick={toggleMute}
+              aria-label={muted ? "Unmute" : "Mute"}
+              className="w-11 h-11 rounded-xl bg-secondary hover:bg-muted flex items-center justify-center transition"
+            >
+              {muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+            </button>
           </div>
         </header>
 
