@@ -20,6 +20,8 @@ export function setMuted(value: boolean) {
   if (typeof window !== "undefined") {
     localStorage.setItem("wc_muted", value ? "1" : "0");
   }
+  if (value) stopMusic();
+  else if (musicWanted) startMusic();
 }
 
 export function isMuted(): boolean {
@@ -167,3 +169,149 @@ export const sfx = {
     lfo.stop(t0 + 0.65);
   },
 };
+
+// ============================================================
+// Stadium anthem background music — looping procedural groove
+// ============================================================
+let musicWanted = false;
+let musicTimer: ReturnType<typeof setInterval> | null = null;
+let musicGain: GainNode | null = null;
+let barIndex = 0;
+
+// 8-step pattern at ~120bpm feel. Notes for a punchy minor stadium chant.
+// Bass walks E2 - E2 - G2 - A2 (classic terrace bounce).
+const BASS = [82.41, 82.41, 98.0, 110.0, 82.41, 82.41, 73.42, 110.0];
+// Brass stab melody (E minor pentatonic), evokes "olé / dun-dun-dun".
+const BRASS_BARS = [
+  [659, 0, 784, 0, 659, 0, 587, 0],
+  [659, 0, 784, 880, 988, 0, 784, 659],
+  [659, 0, 784, 0, 659, 0, 587, 494],
+  [880, 784, 659, 587, 659, 784, 880, 988],
+];
+
+function kick(ac: AudioContext, t: number, dest: AudioNode) {
+  const o = ac.createOscillator();
+  const g = ac.createGain();
+  o.frequency.setValueAtTime(140, t);
+  o.frequency.exponentialRampToValueAtTime(45, t + 0.14);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.9, t + 0.005);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+  o.connect(g).connect(dest);
+  o.start(t);
+  o.stop(t + 0.2);
+}
+
+function clap(ac: AudioContext, t: number, dest: AudioNode) {
+  const len = Math.floor(ac.sampleRate * 0.15);
+  const buf = ac.createBuffer(1, len, ac.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+  const src = ac.createBufferSource();
+  src.buffer = buf;
+  const bp = ac.createBiquadFilter();
+  bp.type = "bandpass";
+  bp.frequency.value = 1600;
+  bp.Q.value = 1.4;
+  const g = ac.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.55, t + 0.005);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+  src.connect(bp).connect(g).connect(dest);
+  src.start(t);
+  src.stop(t + 0.18);
+}
+
+function bassNote(ac: AudioContext, t: number, freq: number, dur: number, dest: AudioNode) {
+  const o = ac.createOscillator();
+  const g = ac.createGain();
+  o.type = "sawtooth";
+  o.frequency.setValueAtTime(freq, t);
+  const lp = ac.createBiquadFilter();
+  lp.type = "lowpass";
+  lp.frequency.value = 380;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.45, t + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(lp).connect(g).connect(dest);
+  o.start(t);
+  o.stop(t + dur + 0.02);
+}
+
+function brass(ac: AudioContext, t: number, freq: number, dur: number, dest: AudioNode) {
+  const o1 = ac.createOscillator();
+  const o2 = ac.createOscillator();
+  const g = ac.createGain();
+  o1.type = "square";
+  o2.type = "sawtooth";
+  o1.frequency.value = freq;
+  o2.frequency.value = freq * 1.005;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.18, t + 0.03);
+  g.gain.setValueAtTime(0.14, t + dur * 0.6);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o1.connect(g);
+  o2.connect(g);
+  g.connect(dest);
+  o1.start(t);
+  o2.start(t);
+  o1.stop(t + dur + 0.02);
+  o2.stop(t + dur + 0.02);
+}
+
+function scheduleBar() {
+  const ac = getCtx();
+  if (!ac || !musicGain) return;
+  const stepDur = 0.25; // 16th-ish, ~120bpm
+  const t0 = ac.currentTime + 0.05;
+  const brassLine = BRASS_BARS[barIndex % BRASS_BARS.length];
+  for (let i = 0; i < 8; i++) {
+    const t = t0 + i * stepDur;
+    // kick on 1 and 5
+    if (i === 0 || i === 4) kick(ac, t, musicGain);
+    // clap on 3 and 7
+    if (i === 2 || i === 6) clap(ac, t, musicGain);
+    // bassline
+    bassNote(ac, t, BASS[i], stepDur * 0.9, musicGain);
+    // brass stabs
+    const bf = brassLine[i];
+    if (bf) brass(ac, t, bf, stepDur * 0.85, musicGain);
+  }
+  barIndex++;
+}
+
+export function startMusic() {
+  musicWanted = true;
+  if (muted) return;
+  const ac = getCtx();
+  if (!ac) return;
+  if (musicTimer) return;
+  if (!musicGain) {
+    musicGain = ac.createGain();
+    musicGain.gain.value = 0.0001;
+    musicGain.connect(ac.destination);
+  }
+  musicGain.gain.cancelScheduledValues(ac.currentTime);
+  musicGain.gain.exponentialRampToValueAtTime(0.22, ac.currentTime + 0.8);
+  scheduleBar();
+  // 8 steps * 0.25s = 2s per bar
+  musicTimer = setInterval(scheduleBar, 2000);
+}
+
+export function stopMusic() {
+  musicWanted = false;
+  if (musicTimer) {
+    clearInterval(musicTimer);
+    musicTimer = null;
+  }
+  const ac = getCtx();
+  if (ac && musicGain) {
+    musicGain.gain.cancelScheduledValues(ac.currentTime);
+    musicGain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.4);
+  }
+}
+
+export function isMusicOn() {
+  return musicWanted;
+}
+

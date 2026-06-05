@@ -8,7 +8,7 @@ import { fetchQuestions, pickRandom } from "@/lib/data/questions";
 import { CATEGORIES, type Category, type Question } from "@/lib/game/types";
 import { addTrophy, getProfile } from "@/lib/profile";
 import { submitScore } from "@/lib/ranking";
-import { sfx, isMuted, setMuted } from "@/lib/game/sfx";
+import { sfx, isMuted, setMuted, startMusic, stopMusic } from "@/lib/game/sfx";
 
 type Phase = "wheel" | "question" | "result" | "won" | "lost";
 
@@ -42,6 +42,7 @@ function GamePage() {
   useEffect(() => {
     setMutedState(isMuted());
     fetchQuestions().then(setAllQuestions).catch(console.error);
+    return () => stopMusic();
   }, []);
 
   function toggleMute() {
@@ -66,6 +67,7 @@ function GamePage() {
   function handleSpin(cat: Category) {
     const q = pickQuestion(cat);
     if (!q) return;
+    startMusic();
     setVarRemoved([]);
     setExtraTimeTrigger(0);
     setCurrent({ cat, q });
@@ -105,6 +107,7 @@ function GamePage() {
       setLastResult({ correct: true, gained });
       if (newWon.length === CATEGORIES.length) {
         endMatch(true, newScore);
+        stopMusic();
         sfx.whistle();
         setTimeout(() => sfx.trophy(), 400);
         setPhase("won");
@@ -118,6 +121,7 @@ function GamePage() {
       setLastResult({ correct: false, gained: 0 });
       if (newLives <= 0) {
         endMatch(false, score);
+        stopMusic();
         sfx.defeat();
         setPhase("lost");
       } else {
