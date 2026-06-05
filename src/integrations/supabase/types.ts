@@ -14,7 +14,69 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      questions: {
+        Row: {
+          category: string
+          correct_index: number
+          created_at: string
+          difficulty: string
+          era: string | null
+          id: string
+          options: Json
+          question: string
+        }
+        Insert: {
+          category: string
+          correct_index: number
+          created_at?: string
+          difficulty?: string
+          era?: string | null
+          id?: string
+          options: Json
+          question: string
+        }
+        Update: {
+          category?: string
+          correct_index?: number
+          created_at?: string
+          difficulty?: string
+          era?: string | null
+          id?: string
+          options?: Json
+          question?: string
+        }
+        Relationships: []
+      }
+      rankings: {
+        Row: {
+          best_score: number
+          created_at: string
+          nickname: string
+          player_id: string
+          total_matches: number
+          trophies_earned: number
+          updated_at: string
+        }
+        Insert: {
+          best_score?: number
+          created_at?: string
+          nickname: string
+          player_id: string
+          total_matches?: number
+          trophies_earned?: number
+          updated_at?: string
+        }
+        Update: {
+          best_score?: number
+          created_at?: string
+          nickname?: string
+          player_id?: string
+          total_matches?: number
+          trophies_earned?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
