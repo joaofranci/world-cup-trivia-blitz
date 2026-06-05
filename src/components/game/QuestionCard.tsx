@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Monitor, Clock, Zap } from "lucide-react";
 import type { Question } from "@/lib/game/types";
 import { CATEGORY_META } from "@/lib/game/types";
 
