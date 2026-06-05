@@ -34,7 +34,9 @@ export function Roulette({ onResult, completed, allowed }: Props) {
     resultRef.current = target;
     setSpinning(true);
     setRotation(final);
+    sfx.spin();
     setTimeout(() => {
+      sfx.spinStop();
       setSpinning(false);
       if (resultRef.current) onResult(resultRef.current);
     }, 3200);
