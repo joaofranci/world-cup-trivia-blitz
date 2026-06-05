@@ -194,6 +194,7 @@ function GamePage() {
               if (extraAvailable === 0) return;
               setExtraAvailable((n) => n - 1);
               setExtraTimeTrigger((n) => n + 1);
+              sfx.extraTime();
             }}
           />
         )}
