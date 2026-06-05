@@ -8,7 +8,7 @@ import { fetchQuestions, pickRandom } from "@/lib/data/questions";
 import { CATEGORIES, type Category, type Question } from "@/lib/game/types";
 import { addTrophy, getProfile } from "@/lib/profile";
 import { submitScore } from "@/lib/ranking";
-import { sfx, isMuted, setMuted } from "@/lib/game/sfx";
+import { sfx, isMuted, setMuted, startMusic, stopMusic } from "@/lib/game/sfx";
 
 type Phase = "wheel" | "question" | "result" | "won" | "lost";
 
