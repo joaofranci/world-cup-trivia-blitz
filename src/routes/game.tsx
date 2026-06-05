@@ -67,6 +67,7 @@ function GamePage() {
   function handleSpin(cat: Category) {
     const q = pickQuestion(cat);
     if (!q) return;
+    startMusic();
     setVarRemoved([]);
     setExtraTimeTrigger(0);
     setCurrent({ cat, q });
