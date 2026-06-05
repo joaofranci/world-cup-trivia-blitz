@@ -29,11 +29,15 @@ export function QuestionCard({
   const [seconds, setSeconds] = useState(initialSeconds);
   const [selected, setSelected] = useState<number | null>(null);
   const [revealed, setRevealed] = useState(false);
+  const [varStage, setVarStage] = useState<"idle" | "scanning" | "done">("idle");
+  const prevVarLen = useRef(0);
   const lockRef = useRef(false);
   const meta = CATEGORY_META[question.category];
 
   useEffect(() => {
     setSeconds(initialSeconds + extraTime);
+    setVarStage("idle");
+    prevVarLen.current = 0;
   }, [question.id]); // reset on new q
 
   useEffect(() => {
@@ -41,15 +45,27 @@ export function QuestionCard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [extraTime]);
 
+  // VAR animation trigger
   useEffect(() => {
-    if (revealed) return;
+    if (varRemoved.length > prevVarLen.current && varStage === "idle") {
+      setVarStage("scanning");
+      const t = setTimeout(() => setVarStage("done"), 1500);
+      return () => clearTimeout(t);
+    }
+    prevVarLen.current = varRemoved.length;
+  }, [varRemoved, varStage]);
+
+  const paused = varStage === "scanning";
+
+  useEffect(() => {
+    if (revealed || paused) return;
     if (seconds <= 0) {
       handleAnswer(-1);
       return;
     }
     const t = setTimeout(() => setSeconds((s) => s - 1), 1000);
     return () => clearTimeout(t);
-  }, [seconds, revealed]);
+  }, [seconds, revealed, paused]);
 
   function handleAnswer(idx: number) {
     if (lockRef.current) return;
@@ -66,12 +82,29 @@ export function QuestionCard({
   return (
     <div className="w-full max-w-2xl mx-auto">
       <div
-        className="rounded-3xl p-6 md:p-8 shadow-stadium border-2"
+        className="relative rounded-3xl p-6 md:p-8 shadow-stadium border-2 overflow-hidden"
         style={{
           background: "var(--color-card)",
-          borderColor: meta.color,
+          borderColor: varStage === "scanning" ? "oklch(0.62 0.22 25)" : meta.color,
+          transition: "border-color 0.3s ease",
         }}
       >
+        {/* VAR scanning overlay */}
+        {varStage === "scanning" && (
+          <>
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-full var-sweep z-10"
+              style={{
+                background: "linear-gradient(180deg, transparent, oklch(0.62 0.22 25 / 0.18) 45%, oklch(0.62 0.22 25 / 0.35) 50%, oklch(0.62 0.22 25 / 0.18) 55%, transparent)",
+              }}
+            />
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 px-4 py-1 rounded-full font-display tracking-[0.3em] text-sm text-white shadow-lg"
+              style={{ background: "oklch(0.55 0.22 25)" }}
+            >
+              ⚽ VAR REVIEW
+            </div>
+          </>
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
@@ -115,6 +148,8 @@ export function QuestionCard({
         <div className="grid gap-3">
           {question.options.map((opt, i) => {
             const removed = varRemoved.includes(i);
+            const scanningThis = removed && varStage === "scanning";
+            const eliminatedDone = removed && varStage === "done";
             const isSel = selected === i;
             const isCorrect = i === question.correct_index;
             let stateClass =
@@ -123,15 +158,20 @@ export function QuestionCard({
               if (isCorrect) stateClass = "border-success bg-success/15 pulse-correct";
               else if (isSel) stateClass = "border-destructive bg-destructive/15 shake";
               else stateClass = "border-border bg-secondary opacity-60";
+            } else if (scanningThis) {
+              stateClass = "var-flash";
+            } else if (eliminatedDone) {
+              stateClass = "border-destructive/40 bg-destructive/5";
             }
             return (
               <button
                 key={i}
-                disabled={revealed || removed}
+                disabled={revealed || removed || paused}
                 onClick={() => handleAnswer(i)}
-                className={`text-left p-4 rounded-2xl border-2 font-medium transition ${stateClass} ${
-                  removed ? "opacity-30 line-through cursor-not-allowed" : ""
-                }`}
+                className={`relative text-left p-4 rounded-2xl border-2 font-medium transition ${stateClass} ${
+                  eliminatedDone ? "opacity-40 line-through cursor-not-allowed" : ""
+                } ${scanningThis ? "var-eliminate" : ""}`}
+                style={scanningThis ? { animationDelay: `${0.6 + varRemoved.indexOf(i) * 0.2}s` } : undefined}
               >
                 <span className="inline-flex items-center gap-3">
                   <span
@@ -142,10 +182,23 @@ export function QuestionCard({
                   </span>
                   {opt}
                 </span>
+                {removed && (
+                  <span
+                    className="var-badge-in absolute -top-2 -right-2 px-2 py-0.5 rounded-md font-display text-xs tracking-wider text-white shadow-md"
+                    style={{
+                      background: "oklch(0.55 0.22 25)",
+                      animationDelay: `${0.4 + varRemoved.indexOf(i) * 0.2}s`,
+                      opacity: 0,
+                    }}
+                  >
+                    OUT
+                  </span>
+                )}
               </button>
             );
           })}
         </div>
+
 
         {/* Power-ups */}
         <div className="grid grid-cols-2 gap-4 mt-6">
