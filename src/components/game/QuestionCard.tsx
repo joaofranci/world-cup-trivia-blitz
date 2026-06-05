@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Monitor, Clock, Zap } from "lucide-react";
 import type { Question } from "@/lib/game/types";
 import { CATEGORY_META } from "@/lib/game/types";
+import { sfx } from "@/lib/game/sfx";
 
 interface Props {
   question: Question;
@@ -49,6 +50,7 @@ export function QuestionCard({
   useEffect(() => {
     if (varRemoved.length > prevVarLen.current && varStage === "idle") {
       setVarStage("scanning");
+      sfx.var();
       const t = setTimeout(() => setVarStage("done"), 1500);
       return () => clearTimeout(t);
     }
@@ -63,6 +65,7 @@ export function QuestionCard({
       handleAnswer(-1);
       return;
     }
+    if (seconds <= 5 && seconds > 0) sfx.tick();
     const t = setTimeout(() => setSeconds((s) => s - 1), 1000);
     return () => clearTimeout(t);
   }, [seconds, revealed, paused]);
@@ -73,6 +76,8 @@ export function QuestionCard({
     setSelected(idx);
     setRevealed(true);
     const correct = idx === question.correct_index;
+    if (correct) sfx.correct();
+    else sfx.wrong();
     setTimeout(() => onAnswer(correct, Math.max(0, seconds)), 1400);
   }
 

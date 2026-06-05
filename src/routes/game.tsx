@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+import { Volume2, VolumeX } from "lucide-react";
 import { Roulette } from "@/components/game/Roulette";
 import { QuestionCard } from "@/components/game/QuestionCard";
 import { TrophySlots } from "@/components/game/TrophySlots";
@@ -7,6 +8,7 @@ import { fetchQuestions, pickRandom } from "@/lib/data/questions";
 import { CATEGORIES, type Category, type Question } from "@/lib/game/types";
 import { addTrophy, getProfile } from "@/lib/profile";
 import { submitScore } from "@/lib/ranking";
+import { sfx, isMuted, setMuted } from "@/lib/game/sfx";
 
 type Phase = "wheel" | "question" | "result" | "won" | "lost";
 
@@ -35,10 +37,18 @@ function GamePage() {
   const [extraAvailable, setExtraAvailable] = useState(2);
   const [varRemoved, setVarRemoved] = useState<number[]>([]);
   const [extraTimeTrigger, setExtraTimeTrigger] = useState(0);
+  const [muted, setMutedState] = useState(false);
 
   useEffect(() => {
+    setMutedState(isMuted());
     fetchQuestions().then(setAllQuestions).catch(console.error);
   }, []);
+
+  function toggleMute() {
+    const next = !muted;
+    setMuted(next);
+    setMutedState(next);
+  }
 
   const remainingCats = useMemo(
     () => CATEGORIES.filter((c) => !won.includes(c)),
@@ -95,6 +105,8 @@ function GamePage() {
       setLastResult({ correct: true, gained });
       if (newWon.length === CATEGORIES.length) {
         endMatch(true, newScore);
+        sfx.whistle();
+        setTimeout(() => sfx.trophy(), 400);
         setPhase("won");
       } else {
         setPhase("result");
@@ -106,6 +118,7 @@ function GamePage() {
       setLastResult({ correct: false, gained: 0 });
       if (newLives <= 0) {
         endMatch(false, score);
+        sfx.defeat();
         setPhase("lost");
       } else {
         setPhase("result");
@@ -138,6 +151,13 @@ function GamePage() {
                 <span className="opacity-20">{"❤️".repeat(3 - lives)}</span>
               </div>
             </div>
+            <button
+              onClick={toggleMute}
+              aria-label={muted ? "Unmute" : "Mute"}
+              className="w-11 h-11 rounded-xl bg-secondary hover:bg-muted flex items-center justify-center transition"
+            >
+              {muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+            </button>
           </div>
         </header>
 
@@ -174,6 +194,7 @@ function GamePage() {
               if (extraAvailable === 0) return;
               setExtraAvailable((n) => n - 1);
               setExtraTimeTrigger((n) => n + 1);
+              sfx.extraTime();
             }}
           />
         )}
