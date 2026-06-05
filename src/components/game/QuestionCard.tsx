@@ -148,6 +148,8 @@ export function QuestionCard({
         <div className="grid gap-3">
           {question.options.map((opt, i) => {
             const removed = varRemoved.includes(i);
+            const scanningThis = removed && varStage === "scanning";
+            const eliminatedDone = removed && varStage === "done";
             const isSel = selected === i;
             const isCorrect = i === question.correct_index;
             let stateClass =
@@ -156,15 +158,20 @@ export function QuestionCard({
               if (isCorrect) stateClass = "border-success bg-success/15 pulse-correct";
               else if (isSel) stateClass = "border-destructive bg-destructive/15 shake";
               else stateClass = "border-border bg-secondary opacity-60";
+            } else if (scanningThis) {
+              stateClass = "var-flash";
+            } else if (eliminatedDone) {
+              stateClass = "border-destructive/40 bg-destructive/5";
             }
             return (
               <button
                 key={i}
-                disabled={revealed || removed}
+                disabled={revealed || removed || paused}
                 onClick={() => handleAnswer(i)}
-                className={`text-left p-4 rounded-2xl border-2 font-medium transition ${stateClass} ${
-                  removed ? "opacity-30 line-through cursor-not-allowed" : ""
-                }`}
+                className={`relative text-left p-4 rounded-2xl border-2 font-medium transition ${stateClass} ${
+                  eliminatedDone ? "opacity-40 line-through cursor-not-allowed" : ""
+                } ${scanningThis ? "var-eliminate" : ""}`}
+                style={scanningThis ? { animationDelay: `${0.6 + varRemoved.indexOf(i) * 0.2}s` } : undefined}
               >
                 <span className="inline-flex items-center gap-3">
                   <span
@@ -175,10 +182,23 @@ export function QuestionCard({
                   </span>
                   {opt}
                 </span>
+                {removed && (
+                  <span
+                    className="var-badge-in absolute -top-2 -right-2 px-2 py-0.5 rounded-md font-display text-xs tracking-wider text-white shadow-md"
+                    style={{
+                      background: "oklch(0.55 0.22 25)",
+                      animationDelay: `${0.4 + varRemoved.indexOf(i) * 0.2}s`,
+                      opacity: 0,
+                    }}
+                  >
+                    OUT
+                  </span>
+                )}
               </button>
             );
           })}
         </div>
+
 
         {/* Power-ups */}
         <div className="grid grid-cols-2 gap-4 mt-6">
