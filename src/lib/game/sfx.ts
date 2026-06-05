@@ -20,6 +20,8 @@ export function setMuted(value: boolean) {
   if (typeof window !== "undefined") {
     localStorage.setItem("wc_muted", value ? "1" : "0");
   }
+  if (value) stopMusic();
+  else if (musicWanted) startMusic();
 }
 
 export function isMuted(): boolean {
