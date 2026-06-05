@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Monitor, Clock, Zap } from "lucide-react";
 import type { Question } from "@/lib/game/types";
 import { CATEGORY_META } from "@/lib/game/types";
 
@@ -147,23 +148,81 @@ export function QuestionCard({
         </div>
 
         {/* Power-ups */}
-        <div className="flex items-center justify-center gap-3 mt-6">
-          <button
-            onClick={onUseVar}
+        <div className="grid grid-cols-2 gap-4 mt-6">
+          <PowerUpButton
+            icon={<Monitor className="w-6 h-6" />}
+            label="VAR Review"
+            description="Removes 2 wrong answers"
+            count={varAvailable}
             disabled={revealed || varAvailable === 0 || varRemoved.length > 0}
-            className="px-4 py-2 rounded-xl bg-foreground/5 border-2 border-border font-display tracking-wide text-sm hover:bg-foreground/10 transition disabled:opacity-40"
-          >
-            📺 VAR ({varAvailable})
-          </button>
-          <button
-            onClick={onUseExtra}
+            onClick={onUseVar}
+            variant="var"
+          />
+          <PowerUpButton
+            icon={<Clock className="w-6 h-6" />}
+            label="Extra Time"
+            description="+10 seconds on the clock"
+            count={extraAvailable}
             disabled={revealed || extraAvailable === 0}
-            className="px-4 py-2 rounded-xl bg-foreground/5 border-2 border-border font-display tracking-wide text-sm hover:bg-foreground/10 transition disabled:opacity-40"
-          >
-            ⏱️ Extra Time ({extraAvailable})
-          </button>
+            onClick={onUseExtra}
+            variant="time"
+          />
         </div>
       </div>
     </div>
+  );
+}
+
+function PowerUpButton({
+  icon,
+  label,
+  description,
+  count,
+  disabled,
+  onClick,
+  variant,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  description: string;
+  count: number;
+  disabled: boolean;
+  onClick: () => void;
+  variant: "var" | "time";
+}) {
+  const active = !disabled;
+  const baseColor = variant === "var" ? "oklch(0.5 0.15 250)" : "oklch(0.55 0.15 145)";
+  const glowColor = variant === "var" ? "oklch(0.5 0.15 250 / 0.3)" : "oklch(0.55 0.15 145 / 0.3)";
+
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`relative flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all duration-200 ${
+        active
+          ? "hover:scale-[1.03] cursor-pointer"
+          : "opacity-40 cursor-not-allowed grayscale"
+      }`}
+      style={{
+        background: active ? `linear-gradient(135deg, ${baseColor}, oklch(0.3 0.08 150))` : "var(--color-muted)",
+        borderColor: active ? baseColor : "transparent",
+        boxShadow: active ? `0 8px 24px -8px ${glowColor}` : "none",
+      }}
+    >
+      <div className="flex items-center gap-2">
+        <span className="text-white/90">{icon}</span>
+        <span className="font-display text-lg tracking-wide text-white">{label}</span>
+      </div>
+      <span className="text-xs text-white/70 leading-tight text-center">{description}</span>
+      <span
+        className="absolute -top-2 -right-2 w-7 h-7 rounded-full flex items-center justify-center font-display text-sm text-white"
+        style={{ background: active ? baseColor : "var(--color-muted-foreground)" }}
+      >
+        {count}
+      </span>
+      {active && (
+        <Zap className="absolute bottom-2 right-2 w-4 h-4 text-white/40" />
+      )}
+    </button>
   );
 }
