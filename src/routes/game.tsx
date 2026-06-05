@@ -37,10 +37,18 @@ function GamePage() {
   const [extraAvailable, setExtraAvailable] = useState(2);
   const [varRemoved, setVarRemoved] = useState<number[]>([]);
   const [extraTimeTrigger, setExtraTimeTrigger] = useState(0);
+  const [muted, setMutedState] = useState(false);
 
   useEffect(() => {
+    setMutedState(isMuted());
     fetchQuestions().then(setAllQuestions).catch(console.error);
   }, []);
+
+  function toggleMute() {
+    const next = !muted;
+    setMuted(next);
+    setMutedState(next);
+  }
 
   const remainingCats = useMemo(
     () => CATEGORIES.filter((c) => !won.includes(c)),
