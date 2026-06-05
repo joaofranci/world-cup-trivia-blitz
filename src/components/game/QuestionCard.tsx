@@ -89,6 +89,22 @@ export function QuestionCard({
           transition: "border-color 0.3s ease",
         }}
       >
+        {/* VAR scanning overlay */}
+        {varStage === "scanning" && (
+          <>
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-full var-sweep z-10"
+              style={{
+                background: "linear-gradient(180deg, transparent, oklch(0.62 0.22 25 / 0.18) 45%, oklch(0.62 0.22 25 / 0.35) 50%, oklch(0.62 0.22 25 / 0.18) 55%, transparent)",
+              }}
+            />
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 px-4 py-1 rounded-full font-display tracking-[0.3em] text-sm text-white shadow-lg"
+              style={{ background: "oklch(0.55 0.22 25)" }}
+            >
+              ⚽ VAR REVIEW
+            </div>
+          </>
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
