@@ -172,3 +172,57 @@ export function QuestionCard({
     </div>
   );
 }
+
+function PowerUpButton({
+  icon,
+  label,
+  description,
+  count,
+  disabled,
+  onClick,
+  variant,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  description: string;
+  count: number;
+  disabled: boolean;
+  onClick: () => void;
+  variant: "var" | "time";
+}) {
+  const active = !disabled;
+  const baseColor = variant === "var" ? "oklch(0.5 0.15 250)" : "oklch(0.55 0.15 145)";
+  const glowColor = variant === "var" ? "oklch(0.5 0.15 250 / 0.3)" : "oklch(0.55 0.15 145 / 0.3)";
+
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`relative flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all duration-200 ${
+        active
+          ? "hover:scale-[1.03] cursor-pointer"
+          : "opacity-40 cursor-not-allowed grayscale"
+      }`}
+      style={{
+        background: active ? `linear-gradient(135deg, ${baseColor}, oklch(0.3 0.08 150))` : "var(--color-muted)",
+        borderColor: active ? baseColor : "transparent",
+        boxShadow: active ? `0 8px 24px -8px ${glowColor}` : "none",
+      }}
+    >
+      <div className="flex items-center gap-2">
+        <span className="text-white/90">{icon}</span>
+        <span className="font-display text-lg tracking-wide text-white">{label}</span>
+      </div>
+      <span className="text-xs text-white/70 leading-tight text-center">{description}</span>
+      <span
+        className="absolute -top-2 -right-2 w-7 h-7 rounded-full flex items-center justify-center font-display text-sm text-white"
+        style={{ background: active ? baseColor : "var(--color-muted-foreground)" }}
+      >
+        {count}
+      </span>
+      {active && (
+        <Zap className="absolute bottom-2 right-2 w-4 h-4 text-white/40" />
+      )}
+    </button>
+  );
+}
