@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+import { Volume2, VolumeX } from "lucide-react";
 import { Roulette } from "@/components/game/Roulette";
 import { QuestionCard } from "@/components/game/QuestionCard";
 import { TrophySlots } from "@/components/game/TrophySlots";
@@ -7,6 +8,7 @@ import { fetchQuestions, pickRandom } from "@/lib/data/questions";
 import { CATEGORIES, type Category, type Question } from "@/lib/game/types";
 import { addTrophy, getProfile } from "@/lib/profile";
 import { submitScore } from "@/lib/ranking";
+import { sfx, isMuted, setMuted } from "@/lib/game/sfx";
 
 type Phase = "wheel" | "question" | "result" | "won" | "lost";
 
