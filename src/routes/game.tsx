@@ -107,6 +107,7 @@ function GamePage() {
       setLastResult({ correct: true, gained });
       if (newWon.length === CATEGORIES.length) {
         endMatch(true, newScore);
+        stopMusic();
         sfx.whistle();
         setTimeout(() => sfx.trophy(), 400);
         setPhase("won");
@@ -120,6 +121,7 @@ function GamePage() {
       setLastResult({ correct: false, gained: 0 });
       if (newLives <= 0) {
         endMatch(false, score);
+        stopMusic();
         sfx.defeat();
         setPhase("lost");
       } else {
