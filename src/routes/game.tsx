@@ -42,6 +42,7 @@ function GamePage() {
   useEffect(() => {
     setMutedState(isMuted());
     fetchQuestions().then(setAllQuestions).catch(console.error);
+    return () => stopMusic();
   }, []);
 
   function toggleMute() {
