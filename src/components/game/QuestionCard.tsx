@@ -148,21 +148,25 @@ export function QuestionCard({
         </div>
 
         {/* Power-ups */}
-        <div className="flex items-center justify-center gap-3 mt-6">
-          <button
-            onClick={onUseVar}
+        <div className="grid grid-cols-2 gap-4 mt-6">
+          <PowerUpButton
+            icon={<Monitor className="w-6 h-6" />}
+            label="VAR Review"
+            description="Removes 2 wrong answers"
+            count={varAvailable}
             disabled={revealed || varAvailable === 0 || varRemoved.length > 0}
-            className="px-4 py-2 rounded-xl bg-foreground/5 border-2 border-border font-display tracking-wide text-sm hover:bg-foreground/10 transition disabled:opacity-40"
-          >
-            📺 VAR ({varAvailable})
-          </button>
-          <button
-            onClick={onUseExtra}
+            onClick={onUseVar}
+            variant="var"
+          />
+          <PowerUpButton
+            icon={<Clock className="w-6 h-6" />}
+            label="Extra Time"
+            description="+10 seconds on the clock"
+            count={extraAvailable}
             disabled={revealed || extraAvailable === 0}
-            className="px-4 py-2 rounded-xl bg-foreground/5 border-2 border-border font-display tracking-wide text-sm hover:bg-foreground/10 transition disabled:opacity-40"
-          >
-            ⏱️ Extra Time ({extraAvailable})
-          </button>
+            onClick={onUseExtra}
+            variant="time"
+          />
         </div>
       </div>
     </div>
