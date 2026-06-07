@@ -171,27 +171,27 @@ export const sfx = {
 };
 
 // ============================================================
-// Sophisticated cinematic anthem — orchestral chord progression
-// Em – C – G – D, slow swelling pads + harp arpeggio + soft timpani
+// Addictive stadium anthem — fast 128bpm with kick/snare/hihat,
+// pumping bass, catchy lead hook & brass stabs. "Olé olé" energy.
 // ============================================================
 let musicWanted = false;
 let musicTimer: ReturnType<typeof setInterval> | null = null;
 let musicGain: GainNode | null = null;
 let musicBus: BiquadFilterNode | null = null;
-let musicReverb: ConvolverNode | null = null;
 let barIndex = 0;
 
-// Chord voicings (Hz). Three voices per chord: root, third, fifth (with an extra higher tone).
-const CHORDS: { name: string; notes: number[]; arp: number[] }[] = [
-  // E minor
-  { name: "Em", notes: [164.81, 196.0, 246.94, 329.63], arp: [329.63, 392.0, 493.88, 659.25] },
-  // C major
-  { name: "C",  notes: [130.81, 196.0, 261.63, 392.0],  arp: [261.63, 329.63, 392.0, 523.25] },
-  // G major
-  { name: "G",  notes: [196.0, 246.94, 392.0, 493.88],  arp: [392.0, 493.88, 587.33, 783.99] },
-  // D major
-  { name: "D",  notes: [146.83, 220.0, 293.66, 440.0],  arp: [293.66, 369.99, 440.0, 587.33] },
+// 4-bar loop chord roots (Hz): i – VI – III – VII (Em – C – G – D)
+const ROOTS = [82.41, 65.41, 98.0, 73.42];     // E2 C2 G2 D2
+// Lead hook (in E minor pentatonic) — 16 sixteenth-notes per bar
+// pitches as scale degrees; -1 = rest
+const HOOK_DEGREES = [
+  [0, 0, 2, 0, 4, 2, 0, -1,  5, 4, 2, 0, 2, 0, -1, -1],
+  [0, 0, 2, 0, 4, 2, 0, -1,  7, 5, 4, 2, 0, -1, -1, -1],
+  [0, 0, 2, 0, 4, 2, 0, -1,  5, 4, 2, 0, 2, 4, 5, 4],
+  [7, 7, 5, 4, 5, 4, 2, 0,  2, 0, -1, 0, 2, 4, -1, -1],
 ];
+// E minor pentatonic ascending (Hz) starting E4
+const SCALE = [329.63, 392.0, 440.0, 493.88, 587.33, 659.25, 783.99, 880.0];
 
 function ensureBus() {
   const ac = getCtx();
@@ -200,122 +200,146 @@ function ensureBus() {
     musicGain = ac.createGain();
     musicGain.gain.value = 0.0001;
 
-    // Warm low-pass for an orchestral, distant-stadium feel
     musicBus = ac.createBiquadFilter();
     musicBus.type = "lowpass";
-    musicBus.frequency.value = 3800;
-    musicBus.Q.value = 0.4;
+    musicBus.frequency.value = 9000;
+    musicBus.Q.value = 0.3;
 
-    // Lightweight algorithmic reverb (impulse from decaying noise)
-    musicReverb = ac.createConvolver();
-    const len = Math.floor(ac.sampleRate * 1.8);
-    const ir = ac.createBuffer(2, len, ac.sampleRate);
-    for (let ch = 0; ch < 2; ch++) {
-      const d = ir.getChannelData(ch);
-      for (let i = 0; i < len; i++) {
-        d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.2);
-      }
-    }
-    musicReverb.buffer = ir;
-    const wet = ac.createGain();
-    wet.gain.value = 0.35;
-    const dry = ac.createGain();
-    dry.gain.value = 0.85;
-
-    musicBus.connect(dry).connect(musicGain);
-    musicBus.connect(musicReverb).connect(wet).connect(musicGain);
+    musicBus.connect(musicGain);
     musicGain.connect(ac.destination);
   }
   return ac;
 }
 
-// Sustained string-pad voice — slow attack, slow release
-function pad(ac: AudioContext, t: number, freq: number, dur: number, level: number, dest: AudioNode) {
-  const o1 = ac.createOscillator();
-  const o2 = ac.createOscillator();
-  const o3 = ac.createOscillator();
-  o1.type = "sawtooth";
-  o2.type = "sawtooth";
-  o3.type = "triangle";
-  o1.frequency.value = freq;
-  o2.frequency.value = freq * 1.005; // slight detune for chorus shimmer
-  o3.frequency.value = freq * 2;     // octave sparkle
-  const g = ac.createGain();
-  g.gain.setValueAtTime(0.0001, t);
-  g.gain.exponentialRampToValueAtTime(level, t + dur * 0.35);
-  g.gain.setValueAtTime(level, t + dur * 0.7);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  o1.connect(g);
-  o2.connect(g);
-  const g3 = ac.createGain();
-  g3.gain.value = 0.35;
-  o3.connect(g3).connect(g);
-  g.connect(dest);
-  o1.start(t); o2.start(t); o3.start(t);
-  o1.stop(t + dur + 0.05); o2.stop(t + dur + 0.05); o3.stop(t + dur + 0.05);
-}
-
-// Plucked harp/celesta note
-function pluck(ac: AudioContext, t: number, freq: number, dur: number, dest: AudioNode) {
+function kick(ac: AudioContext, t: number, dest: AudioNode) {
   const o = ac.createOscillator();
   const g = ac.createGain();
   o.type = "sine";
-  o.frequency.value = freq;
-  // soft hammer harmonic
-  const o2 = ac.createOscillator();
-  const g2 = ac.createGain();
-  o2.type = "triangle";
-  o2.frequency.value = freq * 2;
-  g2.gain.value = 0.15;
+  o.frequency.setValueAtTime(150, t);
+  o.frequency.exponentialRampToValueAtTime(45, t + 0.12);
   g.gain.setValueAtTime(0.0001, t);
-  g.gain.exponentialRampToValueAtTime(0.22, t + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.7, t + 0.005);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
+  o.connect(g).connect(dest);
+  o.start(t); o.stop(t + 0.3);
+}
+
+function snare(ac: AudioContext, t: number, dest: AudioNode) {
+  const len = Math.floor(ac.sampleRate * 0.18);
+  const buf = ac.createBuffer(1, len, ac.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 1.6);
+  const src = ac.createBufferSource(); src.buffer = buf;
+  const bp = ac.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 1800; bp.Q.value = 0.7;
+  const g = ac.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.35, t + 0.005);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+  src.connect(bp).connect(g).connect(dest);
+  src.start(t); src.stop(t + 0.2);
+}
+
+function hat(ac: AudioContext, t: number, dest: AudioNode, open = false) {
+  const len = Math.floor(ac.sampleRate * (open ? 0.12 : 0.04));
+  const buf = ac.createBuffer(1, len, ac.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  const src = ac.createBufferSource(); src.buffer = buf;
+  const hp = ac.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 7000;
+  const g = ac.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(open ? 0.18 : 0.12, t + 0.003);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + (open ? 0.12 : 0.04));
+  src.connect(hp).connect(g).connect(dest);
+  src.start(t); src.stop(t + 0.15);
+}
+
+function bassNote(ac: AudioContext, t: number, freq: number, dur: number, dest: AudioNode) {
+  const o = ac.createOscillator();
+  const o2 = ac.createOscillator();
+  const g = ac.createGain();
+  o.type = "sawtooth"; o2.type = "square";
+  o.frequency.value = freq; o2.frequency.value = freq * 0.5;
+  const lp = ac.createBiquadFilter(); lp.type = "lowpass";
+  lp.frequency.setValueAtTime(1400, t);
+  lp.frequency.exponentialRampToValueAtTime(400, t + dur);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.25, t + 0.01);
+  g.gain.setValueAtTime(0.25, t + dur * 0.7);
   g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  o.connect(g);
-  o2.connect(g2).connect(g);
+  o.connect(lp); o2.connect(lp);
+  lp.connect(g).connect(dest);
+  o.start(t); o2.start(t);
+  o.stop(t + dur + 0.02); o2.stop(t + dur + 0.02);
+}
+
+function leadNote(ac: AudioContext, t: number, freq: number, dur: number, dest: AudioNode) {
+  const o = ac.createOscillator();
+  const o2 = ac.createOscillator();
+  const g = ac.createGain();
+  o.type = "square"; o2.type = "sawtooth";
+  o.frequency.value = freq; o2.frequency.value = freq * 1.01;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.16, t + 0.005);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g); o2.connect(g);
   g.connect(dest);
   o.start(t); o2.start(t);
   o.stop(t + dur + 0.02); o2.stop(t + dur + 0.02);
 }
 
-// Soft timpani — low resonant thud
-function timpani(ac: AudioContext, t: number, freq: number, dest: AudioNode) {
+function brassStab(ac: AudioContext, t: number, freq: number, dest: AudioNode) {
   const o = ac.createOscillator();
+  const o2 = ac.createOscillator();
   const g = ac.createGain();
-  o.type = "sine";
-  o.frequency.setValueAtTime(freq * 1.4, t);
-  o.frequency.exponentialRampToValueAtTime(freq, t + 0.08);
+  o.type = "sawtooth"; o2.type = "sawtooth";
+  o.frequency.value = freq; o2.frequency.value = freq * 1.5;
   g.gain.setValueAtTime(0.0001, t);
-  g.gain.exponentialRampToValueAtTime(0.5, t + 0.01);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
-  o.connect(g).connect(dest);
-  o.start(t); o.stop(t + 0.65);
+  g.gain.exponentialRampToValueAtTime(0.18, t + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+  o.connect(g); o2.connect(g);
+  g.connect(dest);
+  o.start(t); o2.start(t);
+  o.stop(t + 0.25); o2.stop(t + 0.25);
 }
 
 function scheduleBar() {
   const ac = ensureBus();
   if (!ac || !musicBus) return;
-  const bpm = 76;
-  const beat = 60 / bpm;        // ~0.789s
-  const barDur = beat * 4;       // 4/4
+  const bpm = 128;
+  const beat = 60 / bpm;          // 0.469s
+  const sixteenth = beat / 4;
   const t0 = ac.currentTime + 0.05;
 
-  const chord = CHORDS[barIndex % CHORDS.length];
+  const root = ROOTS[barIndex % ROOTS.length];
+  const hook = HOOK_DEGREES[barIndex % HOOK_DEGREES.length];
 
-  // Sustained string pad — full bar, soft
-  chord.notes.forEach((f, i) => {
-    pad(ac, t0, f, barDur * 1.05, i === 0 ? 0.09 : 0.07, musicBus!);
-  });
-
-  // Soft timpani on beat 1; light tap on beat 3
-  timpani(ac, t0, chord.notes[0], musicBus!);
-  timpani(ac, t0 + beat * 2, chord.notes[0] * 0.75, musicBus!);
-
-  // Harp arpeggio — 8th notes, rising then resolving
-  const pattern = [0, 1, 2, 3, 2, 1, 2, 3];
+  // Drums — four-on-the-floor kick, snare on 2 & 4, 8th hats
+  for (let b = 0; b < 4; b++) {
+    kick(ac, t0 + b * beat, musicBus);
+    if (b === 1 || b === 3) snare(ac, t0 + b * beat, musicBus);
+  }
   for (let i = 0; i < 8; i++) {
-    const t = t0 + i * (beat / 2);
-    const note = chord.arp[pattern[i] % chord.arp.length];
-    pluck(ac, t, note, 0.55, musicBus!);
+    hat(ac, t0 + i * (beat / 2), musicBus, i === 7);
+  }
+
+  // Bass — pumping 8th notes on root, octave on offbeats
+  for (let i = 0; i < 8; i++) {
+    const f = i % 2 === 0 ? root : root * 2;
+    bassNote(ac, t0 + i * (beat / 2), f, beat / 2 * 0.95, musicBus);
+  }
+
+  // Lead hook — 16 sixteenth steps
+  for (let i = 0; i < 16; i++) {
+    const deg = hook[i];
+    if (deg < 0) continue;
+    leadNote(ac, t0 + i * sixteenth, SCALE[deg], sixteenth * 1.6, musicBus);
+  }
+
+  // Brass stabs on beats 1 & 3 every other bar — "olé!"
+  if (barIndex % 2 === 1) {
+    brassStab(ac, t0, root * 4, musicBus);
+    brassStab(ac, t0 + beat * 2, root * 4, musicBus);
   }
 
   barIndex++;
@@ -328,10 +352,10 @@ export function startMusic() {
   if (!ac || !musicGain) return;
   if (musicTimer) return;
   musicGain.gain.cancelScheduledValues(ac.currentTime);
-  musicGain.gain.exponentialRampToValueAtTime(0.28, ac.currentTime + 1.4);
+  musicGain.gain.exponentialRampToValueAtTime(0.32, ac.currentTime + 0.6);
   scheduleBar();
-  // 4 beats @ 76 bpm ≈ 3157ms per bar
-  musicTimer = setInterval(scheduleBar, Math.round((60 / 76) * 4 * 1000));
+  // 4 beats @ 128 bpm = 1875ms per bar
+  musicTimer = setInterval(scheduleBar, Math.round((60 / 128) * 4 * 1000));
 }
 
 export function stopMusic() {
@@ -343,11 +367,12 @@ export function stopMusic() {
   const ac = getCtx();
   if (ac && musicGain) {
     musicGain.gain.cancelScheduledValues(ac.currentTime);
-    musicGain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.8);
+    musicGain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.4);
   }
 }
 
 export function isMusicOn() {
   return musicWanted;
 }
+
 
