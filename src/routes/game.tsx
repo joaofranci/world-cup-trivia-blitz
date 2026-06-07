@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Volume2, VolumeX } from "lucide-react";
 import { Roulette } from "@/components/game/Roulette";
+import { Fireworks } from "@/components/game/Fireworks";
 import { QuestionCard } from "@/components/game/QuestionCard";
 import { TrophySlots } from "@/components/game/TrophySlots";
 import { fetchQuestions, pickRandom } from "@/lib/data/questions";
