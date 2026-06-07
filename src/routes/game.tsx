@@ -227,12 +227,15 @@ function GamePage() {
         )}
 
         {phase === "won" && (
-          <ResultScreen
-            title="🏆 CHAMPION!"
-            subtitle={`You lifted the trophy with ${score} points.`}
-            tone="win"
-            onPlayAgain={() => navigate({ to: "/game", reloadDocument: true })}
-          />
+          <>
+            <Fireworks />
+            <ResultScreen
+              title="🏆 CHAMPION!"
+              subtitle={`You lifted the trophy with ${score} points.`}
+              tone="win"
+              onPlayAgain={() => navigate({ to: "/game", reloadDocument: true })}
+            />
+          </>
         )}
         {phase === "lost" && (
           <ResultScreen
