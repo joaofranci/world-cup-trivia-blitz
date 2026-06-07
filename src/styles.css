@@ -126,7 +126,7 @@
 @layer base {
   * { border-color: var(--color-border); }
   body {
-    background: radial-gradient(ellipse at top, oklch(0.94 0.04 150) 0%, var(--color-background) 60%);
+    background: transparent;
     color: var(--color-foreground);
     font-family: var(--font-sans);
     min-height: 100vh;

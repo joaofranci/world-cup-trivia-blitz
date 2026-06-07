@@ -11,6 +11,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import stadiumBg from "../assets/stadium-bg.png.asset.json";
 
 function NotFoundComponent() {
   return (
@@ -118,6 +119,12 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <div
+        aria-hidden
+        className="fixed inset-0 -z-10 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: `url(${stadiumBg.url})` }}
+      />
+      <div aria-hidden className="fixed inset-0 -z-10 bg-background/70 backdrop-blur-[2px]" />
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
     </QueryClientProvider>
