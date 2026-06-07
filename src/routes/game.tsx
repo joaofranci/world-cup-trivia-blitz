@@ -263,11 +263,11 @@ function ResultScreen({
 }) {
   return (
     <div
-      className={`rounded-3xl p-10 text-center shadow-stadium ${
+      className={`relative z-50 rounded-3xl p-10 text-center shadow-stadium ${
         tone === "win" ? "pitch-bg text-white" : "bg-card"
       }`}
     >
-      <h2 className="font-display text-6xl tracking-wider mb-3">{title}</h2>
+      <h2 className={`font-display text-6xl tracking-wider mb-3 ${tone === "win" ? "neon-text" : ""}`}>{title}</h2>
       <p className="text-lg opacity-90 mb-6">{subtitle}</p>
       <div className="flex gap-3 justify-center flex-wrap">
         <button
