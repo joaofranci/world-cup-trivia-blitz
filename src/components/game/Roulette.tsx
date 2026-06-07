@@ -90,31 +90,39 @@ export function Roulette({ onResult, completed, allowed }: Props) {
               const isDone = completed.includes(w.cat);
               return (
                 <g key={w.cat}>
-                  <path d={w.d} fill={w.meta.color} opacity={isDone ? 0.35 : 1} />
+                  <path d={w.d} fill={w.meta.color} opacity={isDone ? 0.35 : 1} stroke="rgba(0,0,0,0.25)" strokeWidth={2} />
                   <text
                     x={w.lx}
-                    y={w.ly}
+                    y={w.ly - 4}
                     textAnchor="middle"
                     dominantBaseline="middle"
                     style={{
                       fill: "white",
                       fontFamily: "var(--font-display)",
-                      fontSize: 22,
+                      fontSize: 32,
                       letterSpacing: 1,
+                      paintOrder: "stroke",
+                      stroke: "rgba(0,0,0,0.55)",
+                      strokeWidth: 3,
                     }}
                   >
                     {w.meta.icon}
                   </text>
                   <text
                     x={w.lx}
-                    y={w.ly + 22}
+                    y={w.ly + 26}
                     textAnchor="middle"
                     dominantBaseline="middle"
                     style={{
                       fill: "white",
                       fontFamily: "var(--font-display)",
-                      fontSize: 14,
-                      letterSpacing: 1,
+                      fontSize: 17,
+                      fontWeight: 800,
+                      letterSpacing: 1.5,
+                      textTransform: "uppercase",
+                      paintOrder: "stroke",
+                      stroke: "rgba(0,0,0,0.7)",
+                      strokeWidth: 3.5,
                     }}
                   >
                     {w.cat}

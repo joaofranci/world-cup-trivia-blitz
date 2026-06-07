@@ -205,17 +205,18 @@ function GamePage() {
         )}
 
         {phase === "result" && lastResult && (
-          <div className="text-center py-10">
+          <div className="relative text-center py-10">
+            {lastResult.correct && <Fireworks />}
             <div
-              className={`inline-block px-8 py-4 rounded-2xl font-display text-4xl tracking-wider mb-4 ${
+              className={`relative z-50 inline-block px-8 py-4 rounded-2xl font-display text-5xl tracking-wider mb-4 animate-scale-in ${
                 lastResult.correct
-                  ? "bg-success text-success-foreground"
+                  ? "bg-success text-success-foreground neon-text"
                   : "bg-destructive text-destructive-foreground"
               }`}
             >
               {lastResult.correct ? `+${lastResult.gained} GOAL!` : "MISS!"}
             </div>
-            <div>
+            <div className="relative z-50">
               <button
                 onClick={next}
                 className="px-8 py-4 rounded-2xl bg-primary text-primary-foreground font-display text-2xl tracking-wider hover:scale-105 transition"
