@@ -171,131 +171,167 @@ export const sfx = {
 };
 
 // ============================================================
-// Stadium anthem background music — looping procedural groove
+// Sophisticated cinematic anthem — orchestral chord progression
+// Em – C – G – D, slow swelling pads + harp arpeggio + soft timpani
 // ============================================================
 let musicWanted = false;
 let musicTimer: ReturnType<typeof setInterval> | null = null;
 let musicGain: GainNode | null = null;
+let musicBus: BiquadFilterNode | null = null;
+let musicReverb: ConvolverNode | null = null;
 let barIndex = 0;
 
-// 8-step pattern at ~120bpm feel. Notes for a punchy minor stadium chant.
-// Bass walks E2 - E2 - G2 - A2 (classic terrace bounce).
-const BASS = [82.41, 82.41, 98.0, 110.0, 82.41, 82.41, 73.42, 110.0];
-// Brass stab melody (E minor pentatonic), evokes "olé / dun-dun-dun".
-const BRASS_BARS = [
-  [659, 0, 784, 0, 659, 0, 587, 0],
-  [659, 0, 784, 880, 988, 0, 784, 659],
-  [659, 0, 784, 0, 659, 0, 587, 494],
-  [880, 784, 659, 587, 659, 784, 880, 988],
+// Chord voicings (Hz). Three voices per chord: root, third, fifth (with an extra higher tone).
+const CHORDS: { name: string; notes: number[]; arp: number[] }[] = [
+  // E minor
+  { name: "Em", notes: [164.81, 196.0, 246.94, 329.63], arp: [329.63, 392.0, 493.88, 659.25] },
+  // C major
+  { name: "C",  notes: [130.81, 196.0, 261.63, 392.0],  arp: [261.63, 329.63, 392.0, 523.25] },
+  // G major
+  { name: "G",  notes: [196.0, 246.94, 392.0, 493.88],  arp: [392.0, 493.88, 587.33, 783.99] },
+  // D major
+  { name: "D",  notes: [146.83, 220.0, 293.66, 440.0],  arp: [293.66, 369.99, 440.0, 587.33] },
 ];
 
-function kick(ac: AudioContext, t: number, dest: AudioNode) {
-  const o = ac.createOscillator();
-  const g = ac.createGain();
-  o.frequency.setValueAtTime(140, t);
-  o.frequency.exponentialRampToValueAtTime(45, t + 0.14);
-  g.gain.setValueAtTime(0.0001, t);
-  g.gain.exponentialRampToValueAtTime(0.9, t + 0.005);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
-  o.connect(g).connect(dest);
-  o.start(t);
-  o.stop(t + 0.2);
+function ensureBus() {
+  const ac = getCtx();
+  if (!ac) return null;
+  if (!musicGain) {
+    musicGain = ac.createGain();
+    musicGain.gain.value = 0.0001;
+
+    // Warm low-pass for an orchestral, distant-stadium feel
+    musicBus = ac.createBiquadFilter();
+    musicBus.type = "lowpass";
+    musicBus.frequency.value = 3800;
+    musicBus.Q.value = 0.4;
+
+    // Lightweight algorithmic reverb (impulse from decaying noise)
+    musicReverb = ac.createConvolver();
+    const len = Math.floor(ac.sampleRate * 1.8);
+    const ir = ac.createBuffer(2, len, ac.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = ir.getChannelData(ch);
+      for (let i = 0; i < len; i++) {
+        d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.2);
+      }
+    }
+    musicReverb.buffer = ir;
+    const wet = ac.createGain();
+    wet.gain.value = 0.35;
+    const dry = ac.createGain();
+    dry.gain.value = 0.85;
+
+    musicBus.connect(dry).connect(musicGain);
+    musicBus.connect(musicReverb).connect(wet).connect(musicGain);
+    musicGain.connect(ac.destination);
+  }
+  return ac;
 }
 
-function clap(ac: AudioContext, t: number, dest: AudioNode) {
-  const len = Math.floor(ac.sampleRate * 0.15);
-  const buf = ac.createBuffer(1, len, ac.sampleRate);
-  const d = buf.getChannelData(0);
-  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
-  const src = ac.createBufferSource();
-  src.buffer = buf;
-  const bp = ac.createBiquadFilter();
-  bp.type = "bandpass";
-  bp.frequency.value = 1600;
-  bp.Q.value = 1.4;
-  const g = ac.createGain();
-  g.gain.setValueAtTime(0.0001, t);
-  g.gain.exponentialRampToValueAtTime(0.55, t + 0.005);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
-  src.connect(bp).connect(g).connect(dest);
-  src.start(t);
-  src.stop(t + 0.18);
-}
-
-function bassNote(ac: AudioContext, t: number, freq: number, dur: number, dest: AudioNode) {
-  const o = ac.createOscillator();
-  const g = ac.createGain();
-  o.type = "sawtooth";
-  o.frequency.setValueAtTime(freq, t);
-  const lp = ac.createBiquadFilter();
-  lp.type = "lowpass";
-  lp.frequency.value = 380;
-  g.gain.setValueAtTime(0.0001, t);
-  g.gain.exponentialRampToValueAtTime(0.45, t + 0.02);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  o.connect(lp).connect(g).connect(dest);
-  o.start(t);
-  o.stop(t + dur + 0.02);
-}
-
-function brass(ac: AudioContext, t: number, freq: number, dur: number, dest: AudioNode) {
+// Sustained string-pad voice — slow attack, slow release
+function pad(ac: AudioContext, t: number, freq: number, dur: number, level: number, dest: AudioNode) {
   const o1 = ac.createOscillator();
   const o2 = ac.createOscillator();
-  const g = ac.createGain();
-  o1.type = "square";
+  const o3 = ac.createOscillator();
+  o1.type = "sawtooth";
   o2.type = "sawtooth";
+  o3.type = "triangle";
   o1.frequency.value = freq;
-  o2.frequency.value = freq * 1.005;
+  o2.frequency.value = freq * 1.005; // slight detune for chorus shimmer
+  o3.frequency.value = freq * 2;     // octave sparkle
+  const g = ac.createGain();
   g.gain.setValueAtTime(0.0001, t);
-  g.gain.exponentialRampToValueAtTime(0.18, t + 0.03);
-  g.gain.setValueAtTime(0.14, t + dur * 0.6);
+  g.gain.exponentialRampToValueAtTime(level, t + dur * 0.35);
+  g.gain.setValueAtTime(level, t + dur * 0.7);
   g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
   o1.connect(g);
   o2.connect(g);
+  const g3 = ac.createGain();
+  g3.gain.value = 0.35;
+  o3.connect(g3).connect(g);
   g.connect(dest);
-  o1.start(t);
-  o2.start(t);
-  o1.stop(t + dur + 0.02);
-  o2.stop(t + dur + 0.02);
+  o1.start(t); o2.start(t); o3.start(t);
+  o1.stop(t + dur + 0.05); o2.stop(t + dur + 0.05); o3.stop(t + dur + 0.05);
+}
+
+// Plucked harp/celesta note
+function pluck(ac: AudioContext, t: number, freq: number, dur: number, dest: AudioNode) {
+  const o = ac.createOscillator();
+  const g = ac.createGain();
+  o.type = "sine";
+  o.frequency.value = freq;
+  // soft hammer harmonic
+  const o2 = ac.createOscillator();
+  const g2 = ac.createGain();
+  o2.type = "triangle";
+  o2.frequency.value = freq * 2;
+  g2.gain.value = 0.15;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.22, t + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g);
+  o2.connect(g2).connect(g);
+  g.connect(dest);
+  o.start(t); o2.start(t);
+  o.stop(t + dur + 0.02); o2.stop(t + dur + 0.02);
+}
+
+// Soft timpani — low resonant thud
+function timpani(ac: AudioContext, t: number, freq: number, dest: AudioNode) {
+  const o = ac.createOscillator();
+  const g = ac.createGain();
+  o.type = "sine";
+  o.frequency.setValueAtTime(freq * 1.4, t);
+  o.frequency.exponentialRampToValueAtTime(freq, t + 0.08);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.5, t + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
+  o.connect(g).connect(dest);
+  o.start(t); o.stop(t + 0.65);
 }
 
 function scheduleBar() {
-  const ac = getCtx();
-  if (!ac || !musicGain) return;
-  const stepDur = 0.25; // 16th-ish, ~120bpm
+  const ac = ensureBus();
+  if (!ac || !musicBus) return;
+  const bpm = 76;
+  const beat = 60 / bpm;        // ~0.789s
+  const barDur = beat * 4;       // 4/4
   const t0 = ac.currentTime + 0.05;
-  const brassLine = BRASS_BARS[barIndex % BRASS_BARS.length];
+
+  const chord = CHORDS[barIndex % CHORDS.length];
+
+  // Sustained string pad — full bar, soft
+  chord.notes.forEach((f, i) => {
+    pad(ac, t0, f, barDur * 1.05, i === 0 ? 0.09 : 0.07, musicBus!);
+  });
+
+  // Soft timpani on beat 1; light tap on beat 3
+  timpani(ac, t0, chord.notes[0], musicBus!);
+  timpani(ac, t0 + beat * 2, chord.notes[0] * 0.75, musicBus!);
+
+  // Harp arpeggio — 8th notes, rising then resolving
+  const pattern = [0, 1, 2, 3, 2, 1, 2, 3];
   for (let i = 0; i < 8; i++) {
-    const t = t0 + i * stepDur;
-    // kick on 1 and 5
-    if (i === 0 || i === 4) kick(ac, t, musicGain);
-    // clap on 3 and 7
-    if (i === 2 || i === 6) clap(ac, t, musicGain);
-    // bassline
-    bassNote(ac, t, BASS[i], stepDur * 0.9, musicGain);
-    // brass stabs
-    const bf = brassLine[i];
-    if (bf) brass(ac, t, bf, stepDur * 0.85, musicGain);
+    const t = t0 + i * (beat / 2);
+    const note = chord.arp[pattern[i] % chord.arp.length];
+    pluck(ac, t, note, 0.55, musicBus!);
   }
+
   barIndex++;
 }
 
 export function startMusic() {
   musicWanted = true;
   if (muted) return;
-  const ac = getCtx();
-  if (!ac) return;
+  const ac = ensureBus();
+  if (!ac || !musicGain) return;
   if (musicTimer) return;
-  if (!musicGain) {
-    musicGain = ac.createGain();
-    musicGain.gain.value = 0.0001;
-    musicGain.connect(ac.destination);
-  }
   musicGain.gain.cancelScheduledValues(ac.currentTime);
-  musicGain.gain.exponentialRampToValueAtTime(0.22, ac.currentTime + 0.8);
+  musicGain.gain.exponentialRampToValueAtTime(0.28, ac.currentTime + 1.4);
   scheduleBar();
-  // 8 steps * 0.25s = 2s per bar
-  musicTimer = setInterval(scheduleBar, 2000);
+  // 4 beats @ 76 bpm ≈ 3157ms per bar
+  musicTimer = setInterval(scheduleBar, Math.round((60 / 76) * 4 * 1000));
 }
 
 export function stopMusic() {
@@ -307,7 +343,7 @@ export function stopMusic() {
   const ac = getCtx();
   if (ac && musicGain) {
     musicGain.gain.cancelScheduledValues(ac.currentTime);
-    musicGain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.4);
+    musicGain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.8);
   }
 }
 
