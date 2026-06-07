@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Volume2, VolumeX } from "lucide-react";
 import { Roulette } from "@/components/game/Roulette";
+import { Fireworks } from "@/components/game/Fireworks";
 import { QuestionCard } from "@/components/game/QuestionCard";
 import { TrophySlots } from "@/components/game/TrophySlots";
 import { fetchQuestions, pickRandom } from "@/lib/data/questions";
@@ -226,12 +227,15 @@ function GamePage() {
         )}
 
         {phase === "won" && (
-          <ResultScreen
-            title="🏆 CHAMPION!"
-            subtitle={`You lifted the trophy with ${score} points.`}
-            tone="win"
-            onPlayAgain={() => navigate({ to: "/game", reloadDocument: true })}
-          />
+          <>
+            <Fireworks />
+            <ResultScreen
+              title="🏆 CHAMPION!"
+              subtitle={`You lifted the trophy with ${score} points.`}
+              tone="win"
+              onPlayAgain={() => navigate({ to: "/game", reloadDocument: true })}
+            />
+          </>
         )}
         {phase === "lost" && (
           <ResultScreen
@@ -259,11 +263,11 @@ function ResultScreen({
 }) {
   return (
     <div
-      className={`rounded-3xl p-10 text-center shadow-stadium ${
+      className={`relative z-50 rounded-3xl p-10 text-center shadow-stadium ${
         tone === "win" ? "pitch-bg text-white" : "bg-card"
       }`}
     >
-      <h2 className="font-display text-6xl tracking-wider mb-3">{title}</h2>
+      <h2 className={`font-display text-6xl tracking-wider mb-3 ${tone === "win" ? "neon-text" : ""}`}>{title}</h2>
       <p className="text-lg opacity-90 mb-6">{subtitle}</p>
       <div className="flex gap-3 justify-center flex-wrap">
         <button
