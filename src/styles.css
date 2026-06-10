@@ -4,8 +4,6 @@
 
 @custom-variant dark (&:is(.dark *));
 
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&display=swap');
-
 @theme inline {
   --font-display: "Bebas Neue", system-ui, sans-serif;
   --font-sans: "Inter", system-ui, sans-serif;
